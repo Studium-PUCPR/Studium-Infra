@@ -1,9 +1,5 @@
-# Studium-Infra (DevOps & Cloud Configuration)
+Studium-Infra
 
-Stack: Terraform + Docker Compose (with LocalStack).
+Stack: Terraform + Kubernetes YAML manifests (k8s/).
 
-Responsibilities:
-
-Provisions Amazon Cognito (User Pool + Estudante, Professor, Administrador groups), AWS API Gateway (HTTP API with Cognito JWT Authorizer), SNS Topics, SQS Queues (plus SNS→SQS fan-out subscriptions), and Amazon SES.
-
-Provides a unified docker-compose.yml with LocalStack and PostgreSQL/SQL Server instances so all 5 team members can run the entire cloud stack locally for free.
+Role: Provisions the Amazon EKS cluster, NGINX Ingress Controller, SNS Topics + SQS Queues (with IAM IRSA / Pod Identity permissions so EKS pods can poll SQS), and Amazon Cognito.
