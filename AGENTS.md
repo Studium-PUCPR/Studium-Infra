@@ -14,7 +14,7 @@
 
 ### 1.2 Target Cloud Platform & Region
 - **Stack:** `.NET 10.0` (`net10.0`) C# AWS CDK (`Amazon.CDK.Lib` `2.275.0`).
-- **Region:** `sa-east-1` (São Paulo) by default.
+- **Region:** `us-east-2` (São Paulo) by default.
 - **Entrypoint:** `Program.cs` synthesizes `StudiumStack` via `app.Synth()`.
 
 ### 1.3 Resource Architecture & Modular Constructs
@@ -38,7 +38,7 @@
 - [`cdk.json`](./cdk.json) — CDK configuration (`dotnet run --project Studium-Infra.csproj`).
 - [`Program.cs`](./Program.cs) — Composition root synthesizing `StudiumStack`.
 - [`Stacks/StudiumStack.cs`](./Stacks/StudiumStack.cs) — Central CloudFormation stack composing all infrastructure constructs.
-- [`.github/workflows/deploy.yml`](./.github/workflows/deploy.yml) — GitHub Actions CI/CD deploying CDK changes on push/dispatch using Node 24 and OIDC authentication.
+- [`.github/workflows/deploy.yml`](./.github/workflows/deploy.yml) — GitHub Actions CI/CD deploying CDK changes on push/dispatch using Node 24 and IAM credentials.
 - `Constructs/`:
   - [`NetworkConstruct.cs`](./Constructs/NetworkConstruct.cs)
   - [`CognitoConstruct.cs`](./Constructs/CognitoConstruct.cs)
@@ -62,3 +62,8 @@
 - **2026-11-08 (Added Studium-Infra CI/CD & Node 24 Support):**
   - Added `.github/workflows/deploy.yml` with `workflow_dispatch` and push triggers running `cdk synth` on PRs and `cdk deploy` on main.
   - Enabled `ACTIONS_RUNNER_FORCE_ACTIONS_NODE_VERSION: node24` to address GitHub Actions Node 20 deprecation warnings.
+- **2026-11-08 (Switched Default AWS Region to us-east-2):**
+  - Switched default region from `sa-east-1` to `us-east-2` across `Program.cs` and `deploy.yml`.
+- **2026-11-08 (Switched to Standard IAM Access Keys for CI/CD):**
+  - Reverted experimental OIDC stack due to Free Tier/SCP restrictions on IAM identity providers.
+  - Configured GitHub Actions to authenticate via `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY`.
