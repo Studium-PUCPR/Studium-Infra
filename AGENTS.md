@@ -67,3 +67,5 @@
 - **2026-11-08 (Switched to Standard IAM Access Keys for CI/CD):**
   - Reverted experimental OIDC stack due to Free Tier/SCP restrictions on IAM identity providers.
   - Configured GitHub Actions to authenticate via `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY`.
+- **2026-11-08 (Allowed Ingress on PostgreSQL RDS):**
+  - Added `Instance.Connections.AllowDefaultPortFromAnyIpv4()` to `DatabaseConstruct.cs` ensuring EKS pods can access PostgreSQL port 5432.

@@ -39,6 +39,8 @@ public class DatabaseConstruct : Construct
             RemovalPolicy = RemovalPolicy.DESTROY
         });
 
+        Instance.Connections.AllowDefaultPortFromAnyIpv4("Allow PostgreSQL from any IPv4");
+
         _ = new CfnOutput(this, "RdsEndpointAddress", new CfnOutputProps
         {
             Value = Instance.DbInstanceEndpointAddress,
