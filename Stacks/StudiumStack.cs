@@ -10,8 +10,11 @@ public class StudiumStack : Stack
         : base(scope, id, props)
     {
         var network = new NetworkConstruct(this, "Network");
-        _ = new CognitoConstruct(this, "Cognito");
-        _ = new DatabaseConstruct(this, "Database", network.Vpc);
+        var cognito = new CognitoConstruct(this, "Cognito");
+        var database = new DatabaseConstruct(this, "Database", network.Vpc);
         _ = new MessagingConstruct(this, "Messaging");
+        _ = new EcrConstruct(this, "Ecr");
+        _ = new EksConstruct(this, "Eks", network.Vpc);
+        _ = new ParametersConstruct(this, "Parameters", cognito, database);
     }
 }

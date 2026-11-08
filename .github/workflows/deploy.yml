@@ -1,0 +1,84 @@
+name: CDK Deploy Studium-Infra
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+env:
+  ACTIONS_RUNNER_FORCE_ACTIONS_NODE_VERSION: node24
+  CDK_DEFAULT_REGION: sa-east-1
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  synth:
+    name: CDK Synth & Build Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Setup Node.js 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Install AWS CDK CLI
+        run: npm install -g aws-cdk
+
+      - name: Configure AWS Credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ secrets.AWS_REGION || 'sa-east-1' }}
+
+      - name: Restore & Build CDK
+        run: |
+          dotnet restore Studium-Infra.csproj
+          dotnet build Studium-Infra.csproj --no-restore
+
+      - name: CDK Synth (Dry Run)
+        run: cdk synth
+
+  deploy:
+    name: CDK Deploy to AWS
+    needs: synth
+    if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Setup Node.js 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Install AWS CDK CLI
+        run: npm install -g aws-cdk
+
+      - name: Configure AWS Credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ secrets.AWS_REGION || 'sa-east-1' }}
+
+      - name: CDK Deploy
+        run: cdk deploy --require-approval never

@@ -19,6 +19,10 @@ public class DatabaseConstruct : Construct
             {
                 Version = PostgresEngineVersion.VER_16
             }),
+            Credentials = Credentials.FromGeneratedSecret("postgres", new CredentialsBaseOptions
+            {
+                SecretName = "studium/database/postgres"
+            }),
             InstanceType = Amazon.CDK.AWS.EC2.InstanceType.Of(InstanceClass.T4G, InstanceSize.MICRO),
             Vpc = vpc,
             VpcSubnets = new SubnetSelection
