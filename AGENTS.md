@@ -71,3 +71,7 @@
   - Added `Instance.Connections.AllowDefaultPortFromAnyIpv4()` to `DatabaseConstruct.cs` ensuring EKS pods can access PostgreSQL port 5432.
 - **2026-11-08 (Added Wolverine DLQ to SQS Infrastructure):**
   - Added `wolverine-dead-letter-queue` and attached redrive policy to `studium-users-events-queue` in `Constructs/MessagingConstruct.cs`.
+
+- **2026-11-08 (Added Catalog, Booking, Notifications & Front ECR and SQS Queues):**
+  - Updated `EcrConstruct.cs` provisioning container repositories for `studium-catalog`, `studium-booking`, `studium-notifications`, and `studium-front` (in addition to `studium-users`).
+  - Updated `MessagingConstruct.cs` provisioning `studium-booking-events-queue` and `studium-notifications-queue` (in addition to `studium-users-events-queue`), all bound with DLQ redrive policies to `wolverine-dead-letter-queue`.

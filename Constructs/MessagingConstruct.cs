@@ -6,8 +6,10 @@ namespace Studium_Infra.Constructs;
 
 public class MessagingConstruct : Construct
 {
-    public Queue UsersEventsQueue { get; }
     public Queue DeadLetterQueue { get; }
+    public Queue UsersEventsQueue { get; }
+    public Queue BookingEventsQueue { get; }
+    public Queue NotificationsQueue { get; }
 
     public MessagingConstruct(Construct scope, string id) : base(scope, id)
     {
@@ -18,9 +20,22 @@ public class MessagingConstruct : Construct
             RemovalPolicy = RemovalPolicy.DESTROY
         });
 
-        UsersEventsQueue = new Queue(this, "StudiumUsersEventsQueue", new QueueProps
+        UsersEventsQueue = CreateQueue("StudiumUsersEventsQueue", "studium-users-events-queue", "Users");
+        BookingEventsQueue = CreateQueue("StudiumBookingEventsQueue", "studium-booking-events-queue", "Booking");
+        NotificationsQueue = CreateQueue("StudiumNotificationsQueue", "studium-notifications-queue", "Notifications");
+
+        _ = new CfnOutput(this, "DeadLetterQueueUrl", new CfnOutputProps
         {
-            QueueName = "studium-users-events-queue",
+            Value = DeadLetterQueue.QueueUrl,
+            Description = "SQS Queue URL for Wolverine Dead Letter Queue"
+        });
+    }
+
+    private Queue CreateQueue(string id, string queueName, string serviceName)
+    {
+        var queue = new Queue(this, id, new QueueProps
+        {
+            QueueName = queueName,
             ReceiveMessageWaitTime = Duration.Seconds(20),
             VisibilityTimeout = Duration.Seconds(30),
             RetentionPeriod = Duration.Days(4),
@@ -32,16 +47,12 @@ public class MessagingConstruct : Construct
             RemovalPolicy = RemovalPolicy.DESTROY
         });
 
-        _ = new CfnOutput(this, "UsersEventsQueueUrl", new CfnOutputProps
+        _ = new CfnOutput(this, $"{serviceName}EventsQueueUrl", new CfnOutputProps
         {
-            Value = UsersEventsQueue.QueueUrl,
-            Description = "SQS Queue URL for Studium-Users inbound booking events"
+            Value = queue.QueueUrl,
+            Description = $"SQS Queue URL for Studium-{serviceName} events"
         });
 
-        _ = new CfnOutput(this, "DeadLetterQueueUrl", new CfnOutputProps
-        {
-            Value = DeadLetterQueue.QueueUrl,
-            Description = "SQS Queue URL for Wolverine Dead Letter Queue"
-        });
+        return queue;
     }
 }

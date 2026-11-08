@@ -7,12 +7,25 @@ namespace Studium_Infra.Constructs;
 public class EcrConstruct : Construct
 {
     public Repository UsersRepository { get; }
+    public Repository CatalogRepository { get; }
+    public Repository BookingRepository { get; }
+    public Repository NotificationsRepository { get; }
+    public Repository FrontRepository { get; }
 
     public EcrConstruct(Construct scope, string id) : base(scope, id)
     {
-        UsersRepository = new Repository(this, "StudiumUsersEcrRepo", new RepositoryProps
+        UsersRepository = CreateRepository("StudiumUsersEcrRepo", "studium-users", "Users");
+        CatalogRepository = CreateRepository("StudiumCatalogEcrRepo", "studium-catalog", "Catalog");
+        BookingRepository = CreateRepository("StudiumBookingEcrRepo", "studium-booking", "Booking");
+        NotificationsRepository = CreateRepository("StudiumNotificationsEcrRepo", "studium-notifications", "Notifications");
+        FrontRepository = CreateRepository("StudiumFrontEcrRepo", "studium-front", "Frontend");
+    }
+
+    private Repository CreateRepository(string id, string repositoryName, string serviceName)
+    {
+        var repo = new Repository(this, id, new RepositoryProps
         {
-            RepositoryName = "studium-users",
+            RepositoryName = repositoryName,
             EmptyOnDelete = true,
             RemovalPolicy = RemovalPolicy.DESTROY,
             LifecycleRules =
@@ -24,10 +37,12 @@ public class EcrConstruct : Construct
             ]
         });
 
-        _ = new CfnOutput(this, "UsersEcrRepositoryUri", new CfnOutputProps
+        _ = new CfnOutput(this, $"{serviceName}EcrRepositoryUri", new CfnOutputProps
         {
-            Value = UsersRepository.RepositoryUri,
-            Description = "ECR Repository URI for Studium-Users Docker images"
+            Value = repo.RepositoryUri,
+            Description = $"ECR Repository URI for Studium-{serviceName} Docker images"
         });
+
+        return repo;
     }
 }
