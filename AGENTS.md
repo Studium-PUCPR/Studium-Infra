@@ -69,3 +69,5 @@
   - Configured GitHub Actions to authenticate via `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY`.
 - **2026-11-08 (Allowed Ingress on PostgreSQL RDS):**
   - Added `Instance.Connections.AllowDefaultPortFromAnyIpv4()` to `DatabaseConstruct.cs` ensuring EKS pods can access PostgreSQL port 5432.
+- **2026-11-08 (Added Wolverine DLQ to SQS Infrastructure):**
+  - Added `wolverine-dead-letter-queue` and attached redrive policy to `studium-users-events-queue` in `Constructs/MessagingConstruct.cs`.
