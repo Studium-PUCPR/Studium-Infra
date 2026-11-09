@@ -14,22 +14,18 @@
 
 ### 1.2 Target Cloud Platform & Region
 - **Stack:** `.NET 10.0` (`net10.0`) C# AWS CDK (`Amazon.CDK.Lib` `2.275.0`).
-- **Region:** `us-east-2` (São Paulo) by default.
+- **Region:** `us-east-2` (Ohio) by default.
 - **Entrypoint:** `Program.cs` synthesizes `StudiumStack` via `app.Synth()`.
 
 ### 1.3 Resource Architecture & Modular Constructs
 - **`NetworkConstruct`:** Resolves the shared Default VPC (`Vpc.FromLookup(..., IsDefault = true)`), avoiding dedicated NAT Gateway costs while providing public subnets for RDS and EKS nodegroups.
 - **`CognitoConstruct`:** Institutional Amazon Cognito User Pool (`studium-user-pool`) with `SelfSignUpEnabled = false` for SSO/pre-provisioned institutional users, custom attribute `custom:registration_number`, OAuth 2.0 / OIDC hosted UI domain (`studium-auth`), and Cognito groups (`Student`, `Professor`, `Administrator`).
-- **`DatabaseConstruct`:** Standard Amazon RDS for PostgreSQL 16 (`db.t4g.micro`, 20 GB GP2 storage, Single-AZ, Free Tier eligible). Uses `Credentials.FromGeneratedSecret("postgres", ...)` targeting Secrets Manager secret `studium/database/postgres` to automatically generate and securely store database credentials.
-- **`MessagingConstruct`:** Amazon SQS queue (`studium-users-events-queue`, `studium-booking-events-queue`, `studium-notifications-queue`) with 20-second long-polling, 30-second visibility timeout, 4-day retention, and DLQ. *(Preserved on branch `origin/sqs`; active platform messaging runs on RabbitMQ)*.
+- **`DatabaseConstruct`:** Standard Amazon RDS for PostgreSQL 16 (`db.t4g.micro`, 20 GB GP2 storage, Single-AZ, Free Tier eligible). Hosts autonomous databases: `studium_users`, `studium_catalog`, `studium_booking`, and `studium_audit`.
+- **`MessagingConstruct`:** Preserved AWS SQS queues (`studium-users-events-queue`, `studium-booking-events-queue`, `studium-notifications-queue`, `studium-audit-events-queue`) with 20-second long-polling, 30-second visibility timeout, 4-day retention, and DLQ. *(Active platform messaging runs on in-cluster RabbitMQ)*.
 - **`RabbitMQ In-Cluster Messaging` (`k8s/rabbitmq.yaml`):** In-cluster RabbitMQ deployment (`rabbitmq:3-management-alpine`) on EKS namespace `studium` with AMQP port `5672` and Management UI on port `15672`. Microservices connect via `amqp://studium:StudiumRabbitMQ2026!@studium-rabbitmq-service.studium.svc.cluster.local:5672`.
-- **`EcrConstruct`:** Container repositories `studium-users`, `studium-catalog`, `studium-booking`, `studium-notifications`, `studium-front` with `MaxImageCount = 5` lifecycle rule and `EmptyOnDelete = true`.
+- **`EcrConstruct`:** Container repositories `studium-users`, `studium-catalog`, `studium-booking`, `studium-notifications`, `studium-front`, and `studium-audit` with `MaxImageCount = 5` lifecycle rule and `EmptyOnDelete = true`.
 - **`EksConstruct`:** Amazon EKS 1.31 cluster (`studium-eks-cluster`) and managed EC2 nodegroup (`studium-eks-nodes`, `t3.small`, min 1 / desired 1-2 / max 3) with IAM roles for ECR and SQS access.
-- **`ParametersConstruct`:** AWS Systems Manager (SSM) Parameter Store entries:
-  - `/studium/users/cognito/authority`
-  - `/studium/users/cognito/client-id`
-  - `/studium/users/database/endpoint`
-  - `/studium/users/database/secret-name`
+- **`ParametersConstruct`:** AWS Systems Manager (SSM) Parameter Store entries for service discovery and configuration.
 
 ---
 
@@ -53,29 +49,17 @@
 ---
 
 ## 3. Recent Changes History
+- **2026-11-09 (Added Studium-Audit ECR Repository & SQS Queue):**
+  - Updated `EcrConstruct.cs` to provision container repository `studium-audit` with `MaxImageCount = 5` and `EmptyOnDelete = true`.
+  - Updated `MessagingConstruct.cs` to declare `studium-audit-events-queue`.
+  - Updated `Studium-Front/k8s/ingress.yaml` to route `/api/audit` to `studium-audit-service:80`.
+- **2026-11-09 (RabbitMQ Deployment Manifest & SQS Storage Branches):**
+  - Created `k8s/rabbitmq.yaml` containing the complete in-cluster RabbitMQ deployment and ClusterIP service for EKS (`studium-rabbitmq-service:5672`).
+  - Preserved AWS SQS configurations on `origin/sqs` branches across all microservices and documented RabbitMQ migration for `main`.
+- **2026-11-08 (Added Catalog, Booking, Notifications & Front ECR and SQS Queues):**
+  - Updated `EcrConstruct.cs` provisioning container repositories for `studium-catalog`, `studium-booking`, `studium-notifications`, and `studium-front` (in addition to `studium-users`).
+  - Updated `MessagingConstruct.cs` provisioning `studium-booking-events-queue` and `studium-notifications-queue` (in addition to `studium-users-events-queue`), all bound with DLQ redrive policies to `wolverine-dead-letter-queue`.
 - **2026-11-08 (Initial Scaffold & Separation):**
   - Scaffolded `.NET 10` AWS CDK project with CPM (`Amazon.CDK.Lib` `2.275.0`).
   - Extracted infrastructure from `Studium-Users/Infra` into dedicated `Studium-Infra` repository.
   - Implemented modular constructs: `NetworkConstruct`, `CognitoConstruct`, `DatabaseConstruct`, `MessagingConstruct`, `EcrConstruct`, and `EksConstruct`.
-- **2026-11-08 (Added ParametersConstruct & Secrets Manager Integration):**
-  - Configured `Credentials.FromGeneratedSecret` in `DatabaseConstruct` with deterministic secret name `studium/database/postgres`.
-  - Added `ParametersConstruct` creating SSM parameters for Cognito authority/client-id and RDS endpoint/secret-name.
-  - Added `.agents/rules/maintain-agents-md.md` and repository tracking `AGENTS.md`.
-- **2026-11-08 (Added Studium-Infra CI/CD & Node 24 Support):**
-  - Added `.github/workflows/deploy.yml` with `workflow_dispatch` and push triggers running `cdk synth` on PRs and `cdk deploy` on main.
-  - Enabled `ACTIONS_RUNNER_FORCE_ACTIONS_NODE_VERSION: node24` to address GitHub Actions Node 20 deprecation warnings.
-- **2026-11-08 (Switched Default AWS Region to us-east-2):**
-  - Switched default region from `sa-east-1` to `us-east-2` across `Program.cs` and `deploy.yml`.
-- **2026-11-08 (Switched to Standard IAM Access Keys for CI/CD):**
-  - Reverted experimental OIDC stack due to Free Tier/SCP restrictions on IAM identity providers.
-  - Configured GitHub Actions to authenticate via `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY`.
-- **2026-11-08 (Allowed Ingress on PostgreSQL RDS):**
-  - Added `Instance.Connections.AllowDefaultPortFromAnyIpv4()` to `DatabaseConstruct.cs` ensuring EKS pods can access PostgreSQL port 5432.
-- **2026-11-08 (Added Wolverine DLQ to SQS Infrastructure):**
-  - Added `wolverine-dead-letter-queue` and attached redrive policy to `studium-users-events-queue` in `Constructs/MessagingConstruct.cs`.
-- **2026-11-08 (Added Catalog, Booking, Notifications & Front ECR and SQS Queues):**
-  - Updated `EcrConstruct.cs` provisioning container repositories for `studium-catalog`, `studium-booking`, `studium-notifications`, and `studium-front` (in addition to `studium-users`).
-  - Updated `MessagingConstruct.cs` provisioning `studium-booking-events-queue` and `studium-notifications-queue` (in addition to `studium-users-events-queue`), all bound with DLQ redrive policies to `wolverine-dead-letter-queue`.
-- **2026-11-09 (RabbitMQ Deployment Manifest & SQS Storage Branches):**
-  - Created `k8s/rabbitmq.yaml` containing the complete in-cluster RabbitMQ deployment and ClusterIP service for EKS (`studium-rabbitmq-service:5672`).
-  - Preserved AWS SQS configurations on `origin/sqs` branches across all microservices and documented RabbitMQ migration for `main`.

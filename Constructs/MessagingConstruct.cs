@@ -10,6 +10,7 @@ public class MessagingConstruct : Construct
     public Queue UsersEventsQueue { get; }
     public Queue BookingEventsQueue { get; }
     public Queue NotificationsQueue { get; }
+    public Queue AuditEventsQueue { get; }
 
     public MessagingConstruct(Construct scope, string id) : base(scope, id)
     {
@@ -23,6 +24,7 @@ public class MessagingConstruct : Construct
         UsersEventsQueue = CreateQueue("StudiumUsersEventsQueue", "studium-users-events-queue", "Users");
         BookingEventsQueue = CreateQueue("StudiumBookingEventsQueue", "studium-booking-events-queue", "Booking");
         NotificationsQueue = CreateQueue("StudiumNotificationsQueue", "studium-notifications-queue", "Notifications");
+        AuditEventsQueue = CreateQueue("StudiumAuditEventsQueue", "studium-audit-events-queue", "Audit");
 
         _ = new CfnOutput(this, "DeadLetterQueueUrl", new CfnOutputProps
         {

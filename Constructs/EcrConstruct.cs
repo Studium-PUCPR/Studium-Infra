@@ -11,6 +11,7 @@ public class EcrConstruct : Construct
     public Repository BookingRepository { get; }
     public Repository NotificationsRepository { get; }
     public Repository FrontRepository { get; }
+    public Repository AuditRepository { get; }
 
     public EcrConstruct(Construct scope, string id) : base(scope, id)
     {
@@ -19,6 +20,7 @@ public class EcrConstruct : Construct
         BookingRepository = CreateRepository("StudiumBookingEcrRepo", "studium-booking", "Booking");
         NotificationsRepository = CreateRepository("StudiumNotificationsEcrRepo", "studium-notifications", "Notifications");
         FrontRepository = CreateRepository("StudiumFrontEcrRepo", "studium-front", "Frontend");
+        AuditRepository = CreateRepository("StudiumAuditEcrRepo", "studium-audit", "Audit");
     }
 
     private Repository CreateRepository(string id, string repositoryName, string serviceName)
