@@ -48,7 +48,9 @@ public class CognitoConstruct : Construct
             GenerateSecret = false,
             AuthFlows = new AuthFlow
             {
-                UserSrp = true
+                UserSrp = true,
+                UserPassword = true,
+                AdminUserPassword = true
             },
             OAuth = new OAuthSettings
             {
