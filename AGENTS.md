@@ -21,8 +21,9 @@
 - **`NetworkConstruct`:** Resolves the shared Default VPC (`Vpc.FromLookup(..., IsDefault = true)`), avoiding dedicated NAT Gateway costs while providing public subnets for RDS and EKS nodegroups.
 - **`CognitoConstruct`:** Institutional Amazon Cognito User Pool (`studium-user-pool`) with `SelfSignUpEnabled = false` for SSO/pre-provisioned institutional users, custom attribute `custom:registration_number`, OAuth 2.0 / OIDC hosted UI domain (`studium-auth`), and Cognito groups (`Student`, `Professor`, `Administrator`).
 - **`DatabaseConstruct`:** Standard Amazon RDS for PostgreSQL 16 (`db.t4g.micro`, 20 GB GP2 storage, Single-AZ, Free Tier eligible). Uses `Credentials.FromGeneratedSecret("postgres", ...)` targeting Secrets Manager secret `studium/database/postgres` to automatically generate and securely store database credentials.
-- **`MessagingConstruct`:** Amazon SQS queue (`studium-users-events-queue`) with 20-second long-polling (`ReceiveMessageWaitTime = Duration.Seconds(20)`), 30-second visibility timeout, and 4-day retention.
-- **`EcrConstruct`:** Container repository `studium-users` with `MaxImageCount = 5` lifecycle rule and `EmptyOnDelete = true`.
+- **`MessagingConstruct`:** Amazon SQS queue (`studium-users-events-queue`, `studium-booking-events-queue`, `studium-notifications-queue`) with 20-second long-polling, 30-second visibility timeout, 4-day retention, and DLQ. *(Preserved on branch `origin/sqs`; active platform messaging runs on RabbitMQ)*.
+- **`RabbitMQ In-Cluster Messaging` (`k8s/rabbitmq.yaml`):** In-cluster RabbitMQ deployment (`rabbitmq:3-management-alpine`) on EKS namespace `studium` with AMQP port `5672` and Management UI on port `15672`. Microservices connect via `amqp://studium:StudiumRabbitMQ2026!@studium-rabbitmq-service.studium.svc.cluster.local:5672`.
+- **`EcrConstruct`:** Container repositories `studium-users`, `studium-catalog`, `studium-booking`, `studium-notifications`, `studium-front` with `MaxImageCount = 5` lifecycle rule and `EmptyOnDelete = true`.
 - **`EksConstruct`:** Amazon EKS 1.31 cluster (`studium-eks-cluster`) and managed EC2 nodegroup (`studium-eks-nodes`, `t3.small`, min 1 / desired 1-2 / max 3) with IAM roles for ECR and SQS access.
 - **`ParametersConstruct`:** AWS Systems Manager (SSM) Parameter Store entries:
   - `/studium/users/cognito/authority`
@@ -38,6 +39,7 @@
 - [`cdk.json`](./cdk.json) — CDK configuration (`dotnet run --project Studium-Infra.csproj`).
 - [`Program.cs`](./Program.cs) — Composition root synthesizing `StudiumStack`.
 - [`Stacks/StudiumStack.cs`](./Stacks/StudiumStack.cs) — Central CloudFormation stack composing all infrastructure constructs.
+- [`k8s/rabbitmq.yaml`](./k8s/rabbitmq.yaml) — RabbitMQ deployment and ClusterIP service for EKS in namespace `studium`.
 - [`.github/workflows/deploy.yml`](./.github/workflows/deploy.yml) — GitHub Actions CI/CD deploying CDK changes on push/dispatch using Node 24 and IAM credentials.
 - `Constructs/`:
   - [`NetworkConstruct.cs`](./Constructs/NetworkConstruct.cs)
@@ -71,7 +73,9 @@
   - Added `Instance.Connections.AllowDefaultPortFromAnyIpv4()` to `DatabaseConstruct.cs` ensuring EKS pods can access PostgreSQL port 5432.
 - **2026-11-08 (Added Wolverine DLQ to SQS Infrastructure):**
   - Added `wolverine-dead-letter-queue` and attached redrive policy to `studium-users-events-queue` in `Constructs/MessagingConstruct.cs`.
-
 - **2026-11-08 (Added Catalog, Booking, Notifications & Front ECR and SQS Queues):**
   - Updated `EcrConstruct.cs` provisioning container repositories for `studium-catalog`, `studium-booking`, `studium-notifications`, and `studium-front` (in addition to `studium-users`).
   - Updated `MessagingConstruct.cs` provisioning `studium-booking-events-queue` and `studium-notifications-queue` (in addition to `studium-users-events-queue`), all bound with DLQ redrive policies to `wolverine-dead-letter-queue`.
+- **2026-11-09 (RabbitMQ Deployment Manifest & SQS Storage Branches):**
+  - Created `k8s/rabbitmq.yaml` containing the complete in-cluster RabbitMQ deployment and ClusterIP service for EKS (`studium-rabbitmq-service:5672`).
+  - Preserved AWS SQS configurations on `origin/sqs` branches across all microservices and documented RabbitMQ migration for `main`.
