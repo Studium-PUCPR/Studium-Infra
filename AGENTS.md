@@ -21,7 +21,7 @@
 - **`NetworkConstruct`:** Resolves the shared Default VPC (`Vpc.FromLookup(..., IsDefault = true)`), avoiding dedicated NAT Gateway costs while providing public subnets for RDS and EKS nodegroups.
 - **`CognitoConstruct`:** Institutional Amazon Cognito User Pool (`studium-user-pool`) with `SelfSignUpEnabled = false` for SSO/pre-provisioned institutional users, custom attribute `custom:registration_number`, OAuth 2.0 / OIDC hosted UI domain (`studium-auth`), and Cognito groups (`Student`, `Professor`, `Administrator`).
 - **`DatabaseConstruct`:** Standard Amazon RDS for PostgreSQL 16 (`db.t4g.micro`, 20 GB GP2 storage, Single-AZ, Free Tier eligible). Hosts autonomous databases: `studium_users`, `studium_catalog`, `studium_booking`, and `studium_audit`.
-- **`MessagingConstruct`:** Preserved AWS SQS queues (`studium-users-events-queue`, `studium-booking-events-queue`, `studium-notifications-queue`, `studium-audit-events-queue`) with 20-second long-polling, 30-second visibility timeout, 4-day retention, and DLQ. *(Active platform messaging runs on in-cluster RabbitMQ)*.
+- **`MessagingConstruct`:** Preserved AWS SQS queues (`studium-users-events-queue`, `studium-booking-events-queue`, `studium-audit-events-queue`) with 20-second long-polling, 30-second visibility timeout, 4-day retention, and DLQ. *(Active platform messaging runs on in-cluster RabbitMQ)*.
 - **`RabbitMQ In-Cluster Messaging` (`k8s/rabbitmq.yaml`):** In-cluster RabbitMQ deployment (`rabbitmq:3-management-alpine`) on EKS namespace `studium` with AMQP port `5672` and Management UI on port `15672`. Microservices connect via `amqp://studium:StudiumRabbitMQ2026!@studium-rabbitmq-service.studium.svc.cluster.local:5672`.
 - **`EcrConstruct`:** Container repositories `studium-users`, `studium-catalog`, `studium-booking`, `studium-notifications`, `studium-front`, and `studium-audit` with `MaxImageCount = 5` lifecycle rule and `EmptyOnDelete = true`.
 - **`EksConstruct`:** Amazon EKS 1.31 cluster (`studium-eks-cluster`) and managed EC2 nodegroup (`studium-eks-nodes`, `t3.small`, min 1 / desired 1-2 / max 3) with IAM roles for ECR and SQS access.
@@ -49,6 +49,9 @@
 ---
 
 ## 3. Recent Changes History
+- **2026-11-10 (Removed `studium-notifications-queue` from CDK):**
+  - The SQS queue `studium-notifications-queue` was deleted manually in the AWS console; `Studium-Notifications` is REST-only and nothing consumes it.
+  - Removed `NotificationsQueue` and its `NotificationsEventsQueueUrl` output from `MessagingConstruct.cs` so the stack matches AWS. `cdk diff` shows only that queue and output being removed.
 - **2026-11-09 (Added Studium-Audit ECR Repository & SQS Queue):**
   - Updated `EcrConstruct.cs` to provision container repository `studium-audit` with `MaxImageCount = 5` and `EmptyOnDelete = true`.
   - Updated `MessagingConstruct.cs` to declare `studium-audit-events-queue`.
